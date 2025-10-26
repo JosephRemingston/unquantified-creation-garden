@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Flower2, Leaf, Sparkles } from "lucide-react";
 
@@ -14,19 +16,38 @@ const reflectionPrompts = [
 const Garden = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const mood = location.state?.mood;
   const [prompt] = useState(() => 
     reflectionPrompts[Math.floor(Math.random() * reflectionPrompts.length)]
   );
   const [flowers, setFlowers] = useState<number[]>([]);
+  const [totalSessions, setTotalSessions] = useState(0);
 
   useEffect(() => {
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
+
+    // Load user's total sessions count
+    const loadSessionCount = async () => {
+      const { count } = await supabase
+        .from("flow_sessions")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id);
+      
+      setTotalSessions(count || 0);
+    };
+
+    loadSessionCount();
+
     // Animate flowers growing
     const timer = setTimeout(() => {
       setFlowers([1, 2, 3]);
     }, 300);
     return () => clearTimeout(timer);
-  }, []);
+  }, [user, navigate]);
 
   return (
     <div className="min-h-screen gradient-calm flex flex-col items-center justify-center p-6">
@@ -54,7 +75,9 @@ const Garden = () => {
             Your garden grows
           </p>
           <p className="text-muted-foreground mt-2">
-            Not by counting, but by being
+            {totalSessions > 1 
+              ? `${totalSessions} moments of presence` 
+              : "Not by counting, but by being"}
           </p>
         </div>
 

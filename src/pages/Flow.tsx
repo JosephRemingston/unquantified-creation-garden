@@ -1,15 +1,26 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
 const Flow = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const mood = location.state?.mood || "calm";
   const [content, setContent] = useState("");
   const [isActive, setIsActive] = useState(false);
   const [showPrompt, setShowPrompt] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (!user) {
+      navigate("/auth");
+    }
+  }, [user, navigate]);
 
   const prompts: Record<string, string> = {
     calm: "Write about a moment today that brought you peace...",
@@ -24,8 +35,47 @@ const Flow = () => {
     setIsActive(true);
   }, []);
 
-  const handleComplete = () => {
-    navigate("/garden", { state: { mood, content } });
+  const handleComplete = async () => {
+    if (!user || !content.trim()) return;
+    
+    setIsSaving(true);
+    try {
+      // Save the flow session to database
+      const { data: session, error: sessionError } = await supabase
+        .from("flow_sessions")
+        .insert({
+          user_id: user.id,
+          mood,
+          content: content.trim()
+        })
+        .select()
+        .single();
+
+      if (sessionError) throw sessionError;
+
+      // Create garden elements for this session
+      const elementTypes = ["flower", "leaf", "sparkle"];
+      const randomElement = elementTypes[Math.floor(Math.random() * elementTypes.length)];
+      
+      const { error: gardenError } = await supabase
+        .from("garden_elements")
+        .insert({
+          user_id: user.id,
+          session_id: session.id,
+          element_type: randomElement,
+          position_x: Math.random(),
+          position_y: Math.random()
+        });
+
+      if (gardenError) throw gardenError;
+
+      navigate("/garden", { state: { mood, content, sessionId: session.id } });
+    } catch (error: any) {
+      toast.error("Could not save your reflection. Please try again.");
+      console.error("Error saving session:", error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -73,10 +123,10 @@ const Flow = () => {
             
             <Button
               onClick={handleComplete}
-              disabled={!content.trim()}
+              disabled={!content.trim() || isSaving}
               className="bg-primary hover:bg-primary/90 text-primary-foreground px-8"
             >
-              Complete
+              {isSaving ? "Saving..." : "Complete"}
             </Button>
           </div>
         </div>

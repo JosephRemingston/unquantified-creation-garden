@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Wind, Lightbulb, Waves, Heart, Star } from "lucide-react";
 
@@ -14,7 +15,14 @@ const moods = [
 
 const MoodSelect = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) {
+      navigate("/auth");
+    }
+  }, [user, navigate]);
 
   const handleMoodSelect = (moodId: string) => {
     setSelectedMood(moodId);

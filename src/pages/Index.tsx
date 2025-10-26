@@ -1,12 +1,31 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Leaf } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { Leaf, LogOut } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
 
   return (
     <div className="min-h-screen gradient-flow flex items-center justify-center p-6">
+      {user && (
+        <div className="absolute top-6 right-6">
+          <Button
+            variant="ghost"
+            onClick={handleSignOut}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Sign out
+          </Button>
+        </div>
+      )}
+      
       <div className="max-w-3xl text-center animate-fade-in">
         {/* Logo */}
         <div className="flex justify-center mb-8">
@@ -29,13 +48,25 @@ const Index = () => {
         </p>
 
         {/* CTA */}
-        <Button
-          onClick={() => navigate("/mood")}
-          size="lg"
-          className="bg-primary hover:bg-primary/90 text-primary-foreground px-12 py-6 text-lg rounded-full gentle-transition hover:scale-105"
-        >
-          Begin your journey
-        </Button>
+        {user ? (
+          <Button
+            onClick={() => navigate("/mood")}
+            size="lg"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground px-12 py-6 text-lg rounded-full gentle-transition hover:scale-105"
+          >
+            Continue your journey
+          </Button>
+        ) : (
+          <div className="flex gap-4 justify-center">
+            <Button
+              onClick={() => navigate("/auth")}
+              size="lg"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground px-12 py-6 text-lg rounded-full gentle-transition hover:scale-105"
+            >
+              Begin your journey
+            </Button>
+          </div>
+        )}
 
         {/* Philosophy */}
         <div className="mt-16 pt-16 border-t border-border">
